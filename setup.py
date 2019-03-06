@@ -30,7 +30,7 @@ extensions = [
 """
 
 
-setup(name='st_core',
+setup(name='st_aml',
         #packages=['rdmresearch'],
         packages=find_packages(),
         #ext_modules = cythonize(extensions),
