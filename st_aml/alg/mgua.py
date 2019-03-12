@@ -15,6 +15,9 @@ End of examples.
 from . import *
 
 import numpy as np
+from scipy.sparse import issparse
+from sklearn.base import clone
+from sklearn.utils.validation import check_X_y, check_array
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold, cross_validate
 
@@ -46,7 +49,7 @@ class MGUACVQualPredic(object):
         """
         n_splits = 4
         kf = KFold(n_splits = n_splits)
-        _res = cross_validate(self.ml_alg,mat,targets,cv=kf,return_estimator=True,return_train_score=True)
+        _res = cross_validate(self.ml_alg,mat,targets,cv=kf,return_estimator=True,return_train_score=True, error_score='raise')
         quals = []
         preds = []
         for _ind in range(n_splits):
@@ -134,7 +137,7 @@ class MGUAFunc(object):
         """
         """
 
-        params = params["params"]
+        params = list(params["params"])
         mat = self.mat[:,np.asarray(params)]
         out = self.qual_predic(mat,self.targets)
         return {"params": params,
@@ -145,7 +148,7 @@ class MGUAFunc(object):
 def MGUASelectDescriptors(mat,targets,
     complexity,ml_alg=LinearRegression(),
     max_buf_size=20,max_corr_coef=0.8,
-    verbose=0):    
+    n_jobs = 1, verbose=0):    
     """
     Parameters
     ----------
@@ -157,6 +160,8 @@ def MGUASelectDescriptors(mat,targets,
         Maximum amount of features to select.
     ml_alg : sklearn-trainer
         Trainer to select features.
+    n_jobs : int
+        Amount of threads to use.
     """
 
     n_descr = mat.shape[1]
@@ -166,10 +171,11 @@ def MGUASelectDescriptors(mat,targets,
     mgua_func = MGUAFunc(qual_predic,mat,targets)
     mgua_select = MGUASelect(max_buf_size,max_corr_coef)
     
-    mgua_step = GreedySequenceSearch(
+    mgua_step = GreedySetSearch(
         func = mgua_func,
         select = mgua_select,
-        sequence_size = n_descr
+        right_bond = n_descr,
+        n_jobs = n_jobs
     )
 
     return StepWise(
@@ -198,37 +204,52 @@ class MGUA(six.with_metaclass(ABCMeta, BaseEstimator,
         self.complexity = complexity
         self.max_buf_size = max_buf_size
         self.max_corr_coef = max_corr_coef
+        
+        # other parameters
         self._buffer = None
+        self.best_estimator_ = None
         return
 
-    def fit(self,X,y=None,verbose=0):
+    def fit(self,X,y=None,verbose=0,n_jobs=1):
         """
+        Note
+        ----
+        MGUA fit method
         """
+
+        X,y = check_X_y(X,y,accept_large_sparse=False)
+
         # initialize _buffer
         self._buffer = MGUASelectDescriptors(X,y,
             self.complexity,ml_alg=self.estimator,
             max_buf_size=self.max_buf_size,
             max_corr_coef=self.max_corr_coef,
+            n_jobs = n_jobs,
             verbose=verbose)
 
         _param = self._buffer["buffer"][0]["params"]
-        self.estimator.fit(X[:,_param],y)
+        self.best_estimator_ = clone(self.estimator)
+        self.best_estimator_.fit(X[:,_param],y)
 
         return self 
 
     def predict(self,X):
         """
         """
+
         _param = self._buffer["buffer"][0]["params"]
-        return self.estimator.predict(X[:,_param])
+        
+        X = check_array(X,accept_large_sparse=False)
+        
+        return self.best_estimator_.predict(X[:,_param])
 
     @property
     def _estimator_type(self):
-        return self.estimator._estimator_type
+        return self.best_estimator_._estimator_type
 
     def score(self,X,y=None):
         if self._buffer is None:
             raise Exception("Trainer not fitted.")
         _param = self._buffer["buffer"][0]["params"]
-        return self.estimator.score(X[:,_param],y)
+        return self.best_estimator_.score(X[:,_param],y)
 

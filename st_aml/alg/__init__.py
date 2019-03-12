@@ -1,5 +1,7 @@
 import copy
 import sys
+import six
+from joblib import Parallel, delayed
 
 
 def StepWise(initializer,step,stop_condition,verbose=0):
@@ -102,19 +104,24 @@ class GreedySequenceSearch(object):
         Parameters
         ----------
         func: class with method func or function
-            Take dict with "params" key and returns \
-            the same dict with changed fields. \n
-            Only "params" field must not be changed. \n
+            Take dict with "params" key and returns 
+            the same dict with changed fields.
+            Only "params" field must not be changed.
             Input template: { "params": list() }
+
         select: class with method select or function
-            Input - list of {"params": list()}.\
+            Input - list of {"params": list()}.
             Select appropriate sequences from generated one.
+
         sequence_size: int
-            Maximum size of sequence to search.
+            Determines segment right bond to
+            search sequence from.
+            I.e. sequence elements are
+            from [0...sequence_size] segment.
         Note
         ----
-        Generated sequences stored under "params" key.\n
-        Each step add one element into "params".\n
+        Generated sequences stored under "params" key.
+        Each step add one element into "params".
         Params func and select must be consistent.
         """
         if hasattr(func,"func"):
@@ -132,11 +139,11 @@ class GreedySequenceSearch(object):
         Parameters
         ----------
         state : dict
-            Parameter must have structure like:\
+            Parameter must have structure like:
             {"buffer" : list( {"params":[]} )}.
         Note
         ----
-        Function constructs new "buffer" with new "params".\
+        Function constructs new "buffer" with new "params".
         Each step add one element into "params".
         """
         buf = state["buffer"]
@@ -220,6 +227,94 @@ class GreedySequenceSearchDownward(object):
                 _new_el["params"] = list(_param)
                 _new_el["params"].remove(i)
                 _new_buffer.append(func(_new_el))
+        
+        _new_buffer = self.select(_new_buffer)
+        
+        return {"buffer": _new_buffer}
+
+
+class GreedySetSearch(object):
+    """
+    Note
+    ----
+    Construct sequences with integers from segment\
+    [0 .. right_bond-1]. Increment size of sequence.
+    """
+    def __init__(self,func,select,right_bond,add_new_el = False,n_jobs=1):
+        """
+        Parameters
+        ----------
+        func: class with method func or function
+            Take dict with "params" key and returns 
+            the same dict with changed fields.
+            Only "params" field must not be changed.
+            Input template: { "params": list() }
+
+        select: class with method select or function
+            Input - list of {"params": list()}.
+            Select appropriate sequences from generated one.
+
+        right_bond int
+            Determines segment right bond to
+            search sequence from.
+            I.e. sequence elements are
+            from [0...right_bond] segment.
+        Note
+        ----
+        Generated sequences stored under "params" key.
+        Each step add one element into "params".
+        Params func and select must be consistent.
+        """
+        if hasattr(func,"func"):
+            func = func.func
+        if hasattr(select,"select"):
+            select = select.select
+        
+        self.func = func
+        self.select = select
+        self.right_bond = right_bond
+        self.add_new_el = add_new_el
+        self.n_jobs = n_jobs
+        return
+
+    def step(self,state):
+        """
+        Parameters
+        ----------
+        state : dict
+            Parameter must have structure like:
+            {"buffer" : list( {"params":[]} )}.
+        Note
+        ----
+        Function constructs new "buffer" with new "params".
+        Each step add one element into "params".
+        """
+        buf = state["buffer"]
+        func = self.func
+        right_bond = self.right_bond
+        add_new_el = self.add_new_el
+        
+        _new_buffer = []
+        
+        _args_dict = {}
+        
+        for _el in buf:
+            # _param - set
+            _param = _el["params"]
+            for i in range(right_bond):
+                if i in _param:
+                    continue
+                #_new_el = copy.deepcopy(_el)
+                _new_el = dict(_el)
+                _new_el["params"] = set(_param)
+                _new_el["params"].add(i)
+                
+                if add_new_el:
+                    _new_el["new_el"] = i
+                
+                _args_dict[frozenset(_new_el["params"])] = _new_el
+                
+        _new_buffer = Parallel(n_jobs=self.n_jobs)(delayed(func)(_el[1]) for _el in six.iteritems(_args_dict))
         
         _new_buffer = self.select(_new_buffer)
         
