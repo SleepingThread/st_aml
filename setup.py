@@ -35,5 +35,8 @@ setup(name='st_aml',
         packages=find_packages(),
         #ext_modules = cythonize(extensions),
         install_requires=[
+            "numpy>=1.15",
+            "sklearn",
+            "joblib>=0.13"
         ],
         version='0.0.0.dev1')

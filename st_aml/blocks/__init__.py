@@ -747,10 +747,8 @@ class EstimatorBlock(Block):
 
 class Split(Block):
     """
-    Todo
-    ----
-        
     """
+
     def __init__(self,estimator,n_feature_steps,
                  min_samples_split = 2,
                  min_samples_leaf = 1,

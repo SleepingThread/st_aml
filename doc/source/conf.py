@@ -83,7 +83,8 @@ pygments_style = None
 # a list of builtin themes.
 #
 #html_theme = 'alabaster'
-html_theme = 'classic'
+#html_theme = 'classic'
+html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -199,3 +200,11 @@ def skip(app, what, name, obj, would_skip, options):
 
 def setup(app):
     app.connect("autodoc-skip-member", skip)
+
+
+# -- Graphviz options ------------
+
+graphviz_output_format = "svg"
+#graphviz_output_format = "svg"
+
+

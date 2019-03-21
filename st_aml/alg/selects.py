@@ -2,10 +2,8 @@
 
 class MinErrorSelect(object):
     """
-    Note
-    ----
-
     """
+
     def __init__(self,max_buf_size):
         self.max_buf_size = max_buf_size
         return
