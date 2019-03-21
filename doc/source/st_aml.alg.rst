@@ -12,6 +12,14 @@ st\_aml.alg.mgua module
     :undoc-members:
     :show-inheritance:
 
+st\_aml.alg.selects module
+--------------------------
+
+.. automodule:: st_aml.alg.selects
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 Module contents
 ---------------

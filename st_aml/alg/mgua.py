@@ -53,7 +53,7 @@ class MGUACVQualPredic(object):
         quals = []
         preds = []
         for _ind in range(n_splits):
-            quals.append(_res["train_score"][_ind])
+            quals.append(_res["test_score"][_ind])
         for _ind,(train_mat,test_mat) in enumerate(kf.split(mat)):
             preds.append(_res["estimator"][_ind].predict(mat[test_mat]))
         return {"quality":np.mean(quals),"prediction":np.concatenate(preds)}

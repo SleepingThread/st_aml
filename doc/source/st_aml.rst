@@ -7,6 +7,7 @@ Subpackages
 .. toctree::
 
     st_aml.alg
+    st_aml.blocks
 
 Submodules
 ----------
